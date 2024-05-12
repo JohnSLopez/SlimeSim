@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include "VertexBuffer.h"
 #include <iostream>
+#include "Shader.h"
 
 int windowWidth = 1920;
 int windowHeight = 1080;
@@ -16,19 +17,19 @@ float vertices[] =
 	 0.0f,  0.5f, 0.0f
 };
 
-const char* vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-
-const char* fragShaderSource = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-	"}\n\0";
+//const char* vertexShaderSource = "#version 330 core\n"
+//"layout (location = 0) in vec3 aPos;\n"
+//"void main()\n"
+//"{\n"
+//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+//"}\0";
+//
+//const char* fragShaderSource = "#version 330 core\n"
+//    "out vec4 FragColor;\n"
+//    "void main()\n"
+//    "{\n"
+//    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+//	"}\n\0";
 
 int main()
 {
@@ -66,48 +67,49 @@ int main()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	//Initialize vertex shader
-	unsigned int vertexShader;
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
+	////Initialize vertex shader
+	//unsigned int vertexShader;
+	//vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	//glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	//glCompileShader(vertexShader);
 
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl; 
-	}
+	//int success;
+	//char infoLog[512];
+	//glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	//if (!success)
+	//{
+	//	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+	//	std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl; 
+	//}
 
 
-	//Initialize fragment shader
-	unsigned int fragShader;
-	fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragShader, 1, &fragShaderSource, NULL);
-	glCompileShader(fragShader);
+	////Initialize fragment shader
+	//unsigned int fragShader;
+	//fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+	//glShaderSource(fragShader, 1, &fragShaderSource, NULL);
+	//glCompileShader(fragShader);
 
-	glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
+	//glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
+	//if (!success)
+	//{
+	//	glGetShaderInfoLog(fragShader, 512, NULL, infoLog);
+	//	std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	//}
 
-	//Initialize shader program
-	unsigned int shaderProgram;
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragShader);
-	glLinkProgram(shaderProgram);
+	////Initialize shader program
+	//unsigned int shaderProgram;
+	//shaderProgram = glCreateProgram();
+	//glAttachShader(shaderProgram, vertexShader);
+	//glAttachShader(shaderProgram, fragShader);
+	//glLinkProgram(shaderProgram);
 
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success)
-	{
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER_PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
+	//glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	//if (!success)
+	//{
+	//	glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+	//	std::cout << "ERROR::SHADER_PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	//}
+	Shader slimeShader("slimeShader.vs", "slimeShader.fs");
 
 	glPointSize(10);
 	glBindVertexArray(0);
@@ -121,7 +123,7 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUseProgram(shaderProgram);
+		slimeShader.use();
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_POINTS, 0, 3);
 		//call events and swap buffers
@@ -129,9 +131,8 @@ int main()
 		glfwPollEvents();
 	}
 
-
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragShader);
+	//glDeleteShader(vertexShader);
+	//glDeleteShader(fragShader);
 	glfwTerminate();
 	return 0;
 }
