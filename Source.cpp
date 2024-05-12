@@ -10,29 +10,49 @@ int windowHeight = 1080;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
-float vertices[] = 
+//struct position
+//{
+//	float x = 0.0f;
+//	float y = 0.0f;
+//};
+
+struct Agent
 {
-	-0.5f, -0.5f, 0.0f,
-	 0.5f, -0.5f, 0.0f,
-	 0.0f,  0.5f, 0.0f
+	struct position
+	{
+		float x = 0.0f;
+		float y = 0.0f;
+	};
+	position agentPosition;
+
+	//may need to clamp (0,360)
+	float heading = 0.0f;
+
+	Agent(float x, float y, float inputHeading) 
+	{
+		agentPosition.x = x;
+		agentPosition.y = y;
+		heading = inputHeading;
+	}
 };
 
-//const char* vertexShaderSource = "#version 330 core\n"
-//"layout (location = 0) in vec3 aPos;\n"
-//"void main()\n"
-//"{\n"
-//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-//"}\0";
-//
-//const char* fragShaderSource = "#version 330 core\n"
-//    "out vec4 FragColor;\n"
-//    "void main()\n"
-//    "{\n"
-//    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-//	"}\n\0";
+Agent agents[] =
+{
+	Agent(-0.5f, -0.5f, 0.0f),
+	Agent(0.5f, -0.5f, 0.0f),
+	Agent(0.0f, 0.5f, 0.0f)
+};
+
+//float vertices[] = 
+//{
+//	-0.5f, -0.5f, 0.0f,
+//	 0.5f, -0.5f, 0.0f,
+//	 0.0f,  0.5f, 0.0f
+//};
 
 int main()
 {
+	//Initialize glfw
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -63,56 +83,17 @@ int main()
 	glBindVertexArray(VAO);
 
 	//Initialize Vertex Buffers
-	VertexBuffer VBO(vertices, sizeof(vertices));
+	VertexBuffer VBO(agents, sizeof(agents));
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Agent), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	////Initialize vertex shader
-	//unsigned int vertexShader;
-	//vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	//glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	//glCompileShader(vertexShader);
-
-	//int success;
-	//char infoLog[512];
-	//glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	//if (!success)
-	//{
-	//	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-	//	std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl; 
-	//}
-
-
-	////Initialize fragment shader
-	//unsigned int fragShader;
-	//fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-	//glShaderSource(fragShader, 1, &fragShaderSource, NULL);
-	//glCompileShader(fragShader);
-
-	//glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
-	//if (!success)
-	//{
-	//	glGetShaderInfoLog(fragShader, 512, NULL, infoLog);
-	//	std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	//}
-
-	////Initialize shader program
-	//unsigned int shaderProgram;
-	//shaderProgram = glCreateProgram();
-	//glAttachShader(shaderProgram, vertexShader);
-	//glAttachShader(shaderProgram, fragShader);
-	//glLinkProgram(shaderProgram);
-
-	//glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	//if (!success)
-	//{
-	//	glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-	//	std::cout << "ERROR::SHADER_PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	//}
-	Shader slimeShader("slimeShader.vs", "slimeShader.fs");
+	//Create main shader
+	Shader slimeShader("slimeShader.vert", "slimeShader.frag");
 
 	glPointSize(10);
-	glBindVertexArray(0);
+	//glBindVertexArray(0);
+
 	//main render loop
 	while (!glfwWindowShouldClose(window))
 	{
