@@ -1,8 +1,16 @@
 #version 330 core
 
-layout (location = 0) in vec3 agent;
+struct Agent
+{
+	vec2 pos;
+	float angle;
+};
+
+layout (location = 0) in Agent agent;
+uniform float time;
 
 void main()
 {
-	gl_Position = vec4(agent.x, agent.y, 0.0, 1.0);
+	vec2 newPosition = vec2(agent.pos.x + sin(time) * 0.5, agent.pos.y + sin(time) * 0.5);
+	gl_Position = vec4(newPosition.x, newPosition.y, 0.0, 1.0);
 };

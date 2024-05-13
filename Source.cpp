@@ -6,15 +6,10 @@
 
 int windowWidth = 1920;
 int windowHeight = 1080;
+//float deltaTime;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
-
-//struct position
-//{
-//	float x = 0.0f;
-//	float y = 0.0f;
-//};
 
 struct Agent
 {
@@ -26,13 +21,13 @@ struct Agent
 	position agentPosition;
 
 	//may need to clamp (0,360)
-	float heading = 0.0f;
+	float direction = 0.0f;
 
-	Agent(float x, float y, float inputHeading) 
+	Agent(float x, float y, float inputDirection) 
 	{
 		agentPosition.x = x;
 		agentPosition.y = y;
-		heading = inputHeading;
+		direction = inputDirection;
 	}
 };
 
@@ -42,13 +37,6 @@ Agent agents[] =
 	Agent(0.5f, -0.5f, 0.0f),
 	Agent(0.0f, 0.5f, 0.0f)
 };
-
-//float vertices[] = 
-//{
-//	-0.5f, -0.5f, 0.0f,
-//	 0.5f, -0.5f, 0.0f,
-//	 0.0f,  0.5f, 0.0f
-//};
 
 int main()
 {
@@ -83,20 +71,26 @@ int main()
 	glBindVertexArray(VAO);
 
 	//Initialize Vertex Buffers
-	VertexBuffer VBO(agents, sizeof(agents));
+	VertexBuffer agentBuffer(agents, sizeof(agents));
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Agent), (void*)0);
 	glEnableVertexAttribArray(0);
+	//
+	//deltaTime = glfwGetTime();
+	//VertexBuffer timeBuffer(&deltaTime, sizeof(double));
+	//glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(double), (void*)0);
+	//glEnableVertexAttribArray(1);
 
 	//Create main shader
 	Shader slimeShader("slimeShader.vert", "slimeShader.frag");
 
 	glPointSize(10);
-	//glBindVertexArray(0);
+	glBindVertexArray(0);
 
 	//main render loop
 	while (!glfwWindowShouldClose(window))
 	{
+		float time = glfwGetTime();
+		std::cout << time << "\n";
 		//input
 		processInput(window);
 
@@ -104,6 +98,14 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		//timeBuffer.Bind();
+		//glBufferData(1, sizeof(float), &time, GL_DYNAMIC_DRAW);
+
+		int uniformLocation = glGetUniformLocation(slimeShader.ID, "time");
+		slimeShader.use();
+		glUniform1f(uniformLocation, time);
+
+		//agentBuffer.Bind();
 		slimeShader.use();
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_POINTS, 0, 3);
@@ -112,8 +114,6 @@ int main()
 		glfwPollEvents();
 	}
 
-	//glDeleteShader(vertexShader);
-	//glDeleteShader(fragShader);
 	glfwTerminate();
 	return 0;
 }
