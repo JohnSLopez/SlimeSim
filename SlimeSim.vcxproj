@@ -149,12 +149,14 @@
     <ClCompile Include="VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ComputeShader.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="VertexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\slimeShader.fs" />
     <None Include="Shaders\slimeShader.vs" />
+    <None Include="slimeShader.comp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
