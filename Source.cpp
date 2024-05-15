@@ -7,35 +7,47 @@
 
 int windowWidth = 1920;
 int windowHeight = 1080;
-//float deltaTime;
+float currentTime = 0;
+float prevTime = 0;
+float deltaTime= 0;
+# define PI 3.14159265358979323846  /* pi */
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+//void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+
+float mainTextureVertices[] =
+{
+		//position			//color			   //texture coords
+		1.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  1.0f, 1.0f,		// top right
+		1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,		// bot right
+	   -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,		// bot left
+	   -1.0f,  1.0f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f
+};
+
+unsigned int indices[] = { // order for drawing vertices
+		0, 1, 3, // first trinagle
+		1, 2, 3  // second triangle
+};
 
 struct Agent
 {
-	struct position
-	{
-		float x = 0.0f;
-		float y = 0.0f;
-	};
-	position agentPosition;
-
+	float x = 0.0f;
+	float y = 0.0f;
 	float direction = 0.0f;
 
-	Agent(float x, float y, float inputDirection) 
+	Agent(float inputX, float inputY, float inputDirection) 
 	{
-		agentPosition.x = x;
-		agentPosition.y = y;
+		x = inputX;
+		y = inputY;
 		direction = inputDirection;
 	}
 };
 
 Agent agents[] =
 {
-	Agent(-0.5f, -0.5f, 0.0f),
-	Agent(0.5f, -0.5f, 0.0f),
-	Agent(0.0f, 0.5f, 0.0f)
+	Agent(windowWidth / 2 + 20, windowHeight / 2, 0),
+	Agent(windowWidth / 2, windowHeight / 2, PI / 2),
+	Agent(windowWidth / 2 - 20, windowHeight / 2, (3 *PI) / 4)
 };
 
 int main()
@@ -43,8 +55,9 @@ int main()
 	//Initialize glfw
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	//create window object
 	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Slime Simulation", /*glfwGetPrimaryMonitor()*/ NULL, NULL);
@@ -65,61 +78,109 @@ int main()
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
+
 	//Initialize Vertex Array Object
-	unsigned int VAO;
+	unsigned int VAO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
+	glGenBuffers(1, &EBO);
 
 	//Initialize Vertex Buffers
-	VertexBuffer agentBuffer(agents, sizeof(agents));
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	VertexBuffer textureTarget(mainTextureVertices, sizeof(mainTextureVertices));
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	// position attrib
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+
+	// color attrib
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	// texture coord attrib
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+
+	unsigned int ssbo;
+	glGenBuffers(1, &ssbo);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(agents), agents, GL_DYNAMIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo);
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
 	//Create shaders
 	Shader vfSlimeShader("slimeShader.vert", "slimeShader.frag");
 	ComputeShader cSlimeShader("slimeShader.comp");
 
-	vfSlimeShader.use();
-	vfSlimeShader.setInt("tex", 0);
-
 	//Create Textures
 	const unsigned int TEXTURE_WIDTH = 1920, TEXTURE_HEIGHT = 1080;
-	unsigned int texture;
+	unsigned int textureArray[2];
+	unsigned int trailTexture, agentTexture;
 
-	glGenTextures(1, &texture);
+	//trail texture
+	glGenTextures(1, &trailTexture);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, trailTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-	glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	//agent texture
+	glGenTextures(1, &agentTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, agentTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	textureArray[0] = trailTexture;
+	textureArray[1] = agentTexture;
+
+	vfSlimeShader.use();
+	vfSlimeShader.setInt("trailTexture", 0);
+	vfSlimeShader.setInt("agentTexture", 1);
 
 	glPointSize(10);
 	glBindVertexArray(0);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glBindTextures(0, 2, textureArray);
 
 	//main render loop
 	while (!glfwWindowShouldClose(window))
 	{
+		//get deltaTime
+		currentTime = glfwGetTime();
+		deltaTime = currentTime - prevTime;
+		prevTime = currentTime;
+
 		//input
 		processInput(window);
-
-		//rendering commands here
+		
+		//clear previous screen
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
+		//compute shader
 		cSlimeShader.use();
+		cSlimeShader.setFloat("time", currentTime);
+		glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 		glDispatchCompute((unsigned int)TEXTURE_WIDTH, (unsigned int)TEXTURE_HEIGHT, 1);
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-		glClear(GL_COLOR_BUFFER_BIT);
+		//vertex and frag shaders
 		vfSlimeShader.use();
+		vfSlimeShader.setFloat("time", currentTime);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, 3);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		//call events and swap buffers
 		glfwSwapBuffers(window);
@@ -130,10 +191,10 @@ int main()
 	return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
-}
+//void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+//{
+//	glViewport(0, 0, width, height);
+//}
 
 void processInput(GLFWwindow* window)
 {

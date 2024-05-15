@@ -43,5 +43,7 @@
     <None Include="Shaders\slimeShader.fs" />
     <None Include="Shaders\slimeShader.vs" />
     <None Include="slimeShader.comp" />
+    <None Include="slimeShader.frag" />
+    <None Include="slimeShader.vert" />
   </ItemGroup>
 </Project>

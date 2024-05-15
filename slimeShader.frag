@@ -4,10 +4,14 @@ out vec4 FragColor;
 
 in vec2 TexCoords;
 
-uniform sampler2D tex;
+uniform sampler2D trailTexture;
+uniform sampler2D agentTexture;
+uniform float time;
 
 void main()
 {
-	vec3 texCol = texture(tex, TexCoords).rgb;
-	FragColor = vec4(texCol, 1.0f);
+	vec4 agentTex = texture(agentTexture, TexCoords);
+	vec4 trailTex = texture(trailTexture, TexCoords);
+
+	FragColor = agentTex + trailTex;
 };
