@@ -13,8 +13,8 @@ layout (binding = 4, rgba32f) uniform image2D agentTexture;
 uniform int windowWidth;
 uniform int windowHeight;
 uniform float time;
-float diffuseRate = 0.005;
-float decayRate = 0.0003;
+float diffuseRate = 0.2;
+float decayRate = 0.001;
 
 void main()
 {
@@ -22,8 +22,7 @@ void main()
 
 	vec4 agentTex = imageLoad(agentTexture, ivec2(gl_FragCoord.xy)).rgba;
 	vec4 trailTex = imageLoad(trailTexture, ivec2(gl_FragCoord.xy)).rgba;
-	trailTex.a = 1.0f;
-	FragColor = trailTex;
+	FragColor = trailTex + agentTex;
 };
 
 void diffuseTrail()

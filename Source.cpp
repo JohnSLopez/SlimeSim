@@ -1,5 +1,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <random>
 #include "VertexBuffer.h"
 #include <iostream>
 #include "Shader.h"
@@ -7,6 +8,8 @@
 
 unsigned int windowWidth = 1920;
 unsigned int windowHeight = 1080;
+const unsigned int numAgents = 10000;
+
 float currentTime = 0;
 float prevTime = 0;
 float deltaTime= 0;
@@ -41,13 +44,8 @@ struct Agent
 		y = inputY;
 		direction = inputDirection;
 	}
-};
 
-Agent agents[] =
-{
-	Agent(windowWidth / 2 + 20, windowHeight / 2, 0),
-	Agent(windowWidth / 2, windowHeight / 2, PI / 2),
-	Agent(windowWidth / 2 - 20, windowHeight / 2, (3 *PI) / 4)
+	Agent() = default;
 };
 
 int main()
@@ -78,6 +76,16 @@ int main()
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
+	//Generate agents with random direction and spawn in center of screen
+	std::default_random_engine generator;
+	std::uniform_real_distribution<float> distribution(0, 2 * PI);
+	Agent agents[numAgents];
+	for (int i = 0; i < numAgents; i++)
+	{
+		agents[i].x = windowWidth / 2;
+		agents[i].y = windowHeight / 2;
+		agents[i].direction = distribution(generator);
+	}
 
 	//Initialize Vertex Array Object
 	unsigned int VAO, EBO;

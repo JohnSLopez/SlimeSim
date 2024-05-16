@@ -2,17 +2,17 @@
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-//function declarations
-void diffuseTrail(ivec2 texelCoord);
-uint hash (uint x);
-float uintToRange01(uint state);
-
 struct Agent
 {
 	float x;
 	float y;
 	float direction;
 };
+
+//function declarations
+float sense(Agent currentAgent, float sensorAngle);
+uint hash (uint x);
+float uintToRange01(uint state);
 
 //data passed from cpu
 uniform float time;
@@ -25,17 +25,51 @@ layout (std430, binding = 1) buffer agentBuffer
     Agent agents[];
 };
 
-float moveSpeed = 0.005;
+float moveSpeed = 0.0015;
 #define PI 3.1415926535897932384626433832795
+float sensorDistance = 10;
+float sensorAngle = PI / 4;
+float turnSpeed = 0.0001;
 
 void main()
 {
 	//Texel coordinates are int pixel values (0-1920, 0-1080)
     ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+
+	if (texelCoord.x < 0 || texelCoord.x > windowWidth || texelCoord.y < 0 || texelCoord.y > windowHeight)
+	{
+		return;
+	}
+
 	uint index = gl_GlobalInvocationID.x;
 	Agent currentAgent = agents[index];
 
 	uint random = hash(int(currentAgent.y) * windowWidth + int(currentAgent.x) + hash(index + int(time) * 100000));
+	float randomSteer = uintToRange01(hash(random));
+	//sense
+	float senseLeft = sense(currentAgent, sensorAngle);
+	float senseForward = sense(currentAgent, 0);
+	float senseRight = sense(currentAgent, -sensorAngle);
+
+	//Sensed more left
+	if (senseLeft > senseRight && senseLeft > senseForward)
+	{
+		currentAgent.direction += randomSteer * turnSpeed;
+	}
+	//Sensed more right
+	else if (senseRight > senseLeft && senseRight > senseForward)
+	{
+		currentAgent.direction -= randomSteer * turnSpeed;
+	}
+	//Sensed more forward
+	else if (senseForward > senseLeft && senseForward > senseRight)
+	{
+		currentAgent.direction += 0;
+	}
+	else if (senseLeft == 0 && senseRight == 0 && senseForward == 0)
+	{
+		currentAgent.direction += (randomSteer - 0.5) * 2 * turnSpeed;
+	}
 
 	//calculate agent movement
 	currentAgent.x += moveSpeed * cos(currentAgent.direction);
@@ -58,6 +92,15 @@ void main()
 
 	imageStore(agentTexture, texelCoord, vec4(0, 0, 0, 0));
 	imageStore(agentTexture, ivec2(currentAgent.x, currentAgent.y), vec4(1, 1, 1, 1));
+}
+
+float sense(Agent currentAgent, float sensorAngle)
+{
+	float sensorDirection = sensorAngle + currentAgent.direction;
+	ivec2 sensorPosition = ivec2(currentAgent.x + cos(sensorDirection) * sensorDistance, currentAgent.y + sin(sensorDirection) * sensorDistance);
+	vec4 values = imageLoad(trailTexture, sensorPosition);
+	//imageStore(agentTexture, sensorPosition, vec4(0.0, 1.0, 0.0, 1.0));
+	return values.x + values.y + values.z;
 }
 
 //Jenkins hash function
