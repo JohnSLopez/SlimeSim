@@ -2,6 +2,11 @@
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
+//function declarations
+void diffuseTrail(ivec2 texelCoord);
+uint hash (uint x);
+float uintToRange01(uint state);
+
 struct Agent
 {
 	float x;
@@ -9,7 +14,10 @@ struct Agent
 	float direction;
 };
 
+//data passed from cpu
 uniform float time;
+uniform uint windowWidth;
+uniform uint windowHeight;
 layout (binding = 3, rgba32f) uniform image2D trailTexture;
 layout (binding = 4, rgba32f) uniform image2D agentTexture;
 layout (std430, binding = 1) buffer agentBuffer
@@ -18,44 +26,53 @@ layout (std430, binding = 1) buffer agentBuffer
 };
 
 float moveSpeed = 0.005;
-float decayRate = 0.005;
 #define PI 3.1415926535897932384626433832795
 
 void main()
 {
 	//Texel coordinates are int pixel values (0-1920, 0-1080)
-	//vec4 trailValue = vec4(1.0, 1.0, 0.0, 1.0);
-
     ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 	uint index = gl_GlobalInvocationID.x;
 	Agent currentAgent = agents[index];
+
+	uint random = hash(int(currentAgent.y) * windowWidth + int(currentAgent.x) + hash(index + int(time) * 100000));
 
 	//calculate agent movement
 	currentAgent.x += moveSpeed * cos(currentAgent.direction);
 	currentAgent.y += moveSpeed * sin(currentAgent.direction);
 
 	//wall detection
-	if (currentAgent.x >= 1920 || currentAgent.x <= 0)
+	if (currentAgent.x >= windowWidth || currentAgent.x <= 0)
 	{
-		currentAgent.x = min(1920 - 1, max(0, currentAgent.x));
-		currentAgent.direction += PI;
+		currentAgent.x = min(windowWidth - 1, max(0, currentAgent.x));
+		currentAgent.direction = uintToRange01(hash(random)) * 2 * PI;
 	}
-	if (currentAgent.y >= 1080 || currentAgent.y <= 0)
+	if (currentAgent.y >= windowHeight || currentAgent.y <= 0)
 	{
-		currentAgent.y = min(1080 - 1, max(0, currentAgent.y));
-		currentAgent.direction += PI;
+		currentAgent.y = min(windowHeight - 1, max(0, currentAgent.y));
+		currentAgent.direction = uintToRange01(hash(random)) * 2 * PI;
 	}
 	imageStore(trailTexture, ivec2(currentAgent.x, currentAgent.y), vec4(1, 1, 1, 1));
 
-	//calculate trail map
-	vec4 originalValue = imageLoad(trailTexture, texelCoord);
-	vec4 evaporatedValue;
-	evaporatedValue.x = max(0, originalValue.x - decayRate * time);
-	evaporatedValue.y = max(0, originalValue.y - decayRate * time);
-	evaporatedValue.z = max(0, originalValue.z - decayRate * time);
-	imageStore(trailTexture, texelCoord, evaporatedValue);
 	agents[index] = currentAgent;
 
-	imageStore(agentTexture, texelCoord, vec4(0, 0, 0, 1));
+	imageStore(agentTexture, texelCoord, vec4(0, 0, 0, 0));
 	imageStore(agentTexture, ivec2(currentAgent.x, currentAgent.y), vec4(1, 1, 1, 1));
+}
+
+//Jenkins hash function
+uint hash( uint x ) {
+    x += ( x << 10u );
+    x ^= ( x >>  6u );
+    x += ( x <<  3u );
+    x ^= ( x >> 11u );
+    x += ( x << 15u );
+    return x;
+}
+
+float uintToRange01(uint state)
+{
+	//scale unsigned int to 0-1 range
+	float res = state / 4294967295.f;
+	return res;
 }

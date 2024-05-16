@@ -5,8 +5,8 @@
 #include "Shader.h"
 #include "ComputeShader.h"
 
-int windowWidth = 1920;
-int windowHeight = 1080;
+unsigned int windowWidth = 1920;
+unsigned int windowHeight = 1080;
 float currentTime = 0;
 float prevTime = 0;
 float deltaTime= 0;
@@ -116,7 +116,7 @@ int main()
 	ComputeShader cSlimeShader("slimeShader.comp");
 
 	//Create Textures
-	const unsigned int TEXTURE_WIDTH = 1920, TEXTURE_HEIGHT = 1080;
+	const unsigned int TEXTURE_WIDTH = windowWidth, TEXTURE_HEIGHT = windowHeight;
 	unsigned int textureArray[2];
 	unsigned int trailTexture, agentTexture;
 
@@ -143,9 +143,15 @@ int main()
 	textureArray[0] = trailTexture;
 	textureArray[1] = agentTexture;
 
+	cSlimeShader.use();
+	cSlimeShader.setUInt("windowWidth", windowWidth);
+	cSlimeShader.setUInt("windowHeight", windowHeight);
+
 	vfSlimeShader.use();
 	vfSlimeShader.setInt("trailTexture", 0);
 	vfSlimeShader.setInt("agentTexture", 1);
+	vfSlimeShader.setInt("windowWidth", windowWidth);
+	vfSlimeShader.setInt("windowHeight", windowHeight);
 
 	glPointSize(10);
 	glBindVertexArray(0);
@@ -170,6 +176,7 @@ int main()
 		//compute shader
 		cSlimeShader.use();
 		cSlimeShader.setFloat("time", currentTime);
+		glBindTextures(0, 2, textureArray);
 		glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 		glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 		glDispatchCompute((unsigned int)TEXTURE_WIDTH, (unsigned int)TEXTURE_HEIGHT, 1);
@@ -178,8 +185,10 @@ int main()
 		//vertex and frag shaders
 		vfSlimeShader.use();
 		vfSlimeShader.setFloat("time", currentTime);
+		vfSlimeShader.setInt("trailTexture", 3);
+		vfSlimeShader.setInt("agentTexture", 4);
 		glBindVertexArray(VAO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		//call events and swap buffers
