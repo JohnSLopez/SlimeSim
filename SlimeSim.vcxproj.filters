@@ -35,9 +35,15 @@
     <ClInclude Include="Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ComputeShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\slimeShader.fs" />
     <None Include="Shaders\slimeShader.vs" />
+    <None Include="slimeShader.comp" />
+    <None Include="slimeShader.frag" />
+    <None Include="slimeShader.vert" />
   </ItemGroup>
 </Project>

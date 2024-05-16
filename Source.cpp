@@ -3,40 +3,61 @@
 #include "VertexBuffer.h"
 #include <iostream>
 #include "Shader.h"
+#include "ComputeShader.h"
 
-int windowWidth = 1920;
-int windowHeight = 1080;
+unsigned int windowWidth = 1920;
+unsigned int windowHeight = 1080;
+float currentTime = 0;
+float prevTime = 0;
+float deltaTime= 0;
+# define PI 3.14159265358979323846  /* pi */
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+//void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
-float vertices[] = 
+float mainTextureVertices[] =
 {
-	-0.5f, -0.5f, 0.0f,
-	 0.5f, -0.5f, 0.0f,
-	 0.0f,  0.5f, 0.0f
+		//position			//color			   //texture coords
+		1.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  1.0f, 1.0f,		// top right
+		1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,		// bot right
+	   -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,		// bot left
+	   -1.0f,  1.0f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f
 };
 
-//const char* vertexShaderSource = "#version 330 core\n"
-//"layout (location = 0) in vec3 aPos;\n"
-//"void main()\n"
-//"{\n"
-//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-//"}\0";
-//
-//const char* fragShaderSource = "#version 330 core\n"
-//    "out vec4 FragColor;\n"
-//    "void main()\n"
-//    "{\n"
-//    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-//	"}\n\0";
+unsigned int indices[] = { // order for drawing vertices
+		0, 1, 3, // first trinagle
+		1, 2, 3  // second triangle
+};
+
+struct Agent
+{
+	float x = 0.0f;
+	float y = 0.0f;
+	float direction = 0.0f;
+
+	Agent(float inputX, float inputY, float inputDirection) 
+	{
+		x = inputX;
+		y = inputY;
+		direction = inputDirection;
+	}
+};
+
+Agent agents[] =
+{
+	Agent(windowWidth / 2 + 20, windowHeight / 2, 0),
+	Agent(windowWidth / 2, windowHeight / 2, PI / 2),
+	Agent(windowWidth / 2 - 20, windowHeight / 2, (3 *PI) / 4)
+};
 
 int main()
 {
+	//Initialize glfw
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	//create window object
 	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Slime Simulation", /*glfwGetPrimaryMonitor()*/ NULL, NULL);
@@ -57,90 +78,132 @@ int main()
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
+
 	//Initialize Vertex Array Object
-	unsigned int VAO;
+	unsigned int VAO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
+	glGenBuffers(1, &EBO);
 
 	//Initialize Vertex Buffers
-	VertexBuffer VBO(vertices, sizeof(vertices));
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	VertexBuffer textureTarget(mainTextureVertices, sizeof(mainTextureVertices));
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	// position attrib
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	////Initialize vertex shader
-	//unsigned int vertexShader;
-	//vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	//glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	//glCompileShader(vertexShader);
+	// color attrib
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
 
-	//int success;
-	//char infoLog[512];
-	//glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	//if (!success)
-	//{
-	//	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-	//	std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl; 
-	//}
+	// texture coord attrib
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
 
-	////Initialize fragment shader
-	//unsigned int fragShader;
-	//fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-	//glShaderSource(fragShader, 1, &fragShaderSource, NULL);
-	//glCompileShader(fragShader);
+	unsigned int ssbo;
+	glGenBuffers(1, &ssbo);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(agents), agents, GL_DYNAMIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo);
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
-	//glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
-	//if (!success)
-	//{
-	//	glGetShaderInfoLog(fragShader, 512, NULL, infoLog);
-	//	std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	//}
+	//Create shaders
+	Shader vfSlimeShader("slimeShader.vert", "slimeShader.frag");
+	ComputeShader cSlimeShader("slimeShader.comp");
 
-	////Initialize shader program
-	//unsigned int shaderProgram;
-	//shaderProgram = glCreateProgram();
-	//glAttachShader(shaderProgram, vertexShader);
-	//glAttachShader(shaderProgram, fragShader);
-	//glLinkProgram(shaderProgram);
+	//Create Textures
+	const unsigned int TEXTURE_WIDTH = windowWidth, TEXTURE_HEIGHT = windowHeight;
+	unsigned int textureArray[2];
+	unsigned int trailTexture, agentTexture;
 
-	//glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	//if (!success)
-	//{
-	//	glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-	//	std::cout << "ERROR::SHADER_PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	//}
-	Shader slimeShader("slimeShader.vs", "slimeShader.fs");
+	//trail texture
+	glGenTextures(1, &trailTexture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, trailTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	//agent texture
+	glGenTextures(1, &agentTexture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, agentTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	textureArray[0] = trailTexture;
+	textureArray[1] = agentTexture;
+
+	cSlimeShader.use();
+	cSlimeShader.setUInt("windowWidth", windowWidth);
+	cSlimeShader.setUInt("windowHeight", windowHeight);
+
+	vfSlimeShader.use();
+	vfSlimeShader.setInt("trailTexture", 0);
+	vfSlimeShader.setInt("agentTexture", 1);
+	vfSlimeShader.setInt("windowWidth", windowWidth);
+	vfSlimeShader.setInt("windowHeight", windowHeight);
 
 	glPointSize(10);
 	glBindVertexArray(0);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glBindTextures(0, 2, textureArray);
+
 	//main render loop
 	while (!glfwWindowShouldClose(window))
 	{
+		//get deltaTime
+		currentTime = glfwGetTime();
+		deltaTime = currentTime - prevTime;
+		prevTime = currentTime;
+
 		//input
 		processInput(window);
-
-		//rendering commands here
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		
+		//clear previous screen
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		slimeShader.use();
+		//compute shader
+		cSlimeShader.use();
+		cSlimeShader.setFloat("time", currentTime);
+		glBindTextures(0, 2, textureArray);
+		glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glDispatchCompute((unsigned int)TEXTURE_WIDTH, (unsigned int)TEXTURE_HEIGHT, 1);
+		glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+		//vertex and frag shaders
+		vfSlimeShader.use();
+		vfSlimeShader.setFloat("time", currentTime);
+		vfSlimeShader.setInt("trailTexture", 3);
+		vfSlimeShader.setInt("agentTexture", 4);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, 3);
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
 		//call events and swap buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	//glDeleteShader(vertexShader);
-	//glDeleteShader(fragShader);
 	glfwTerminate();
 	return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
-}
+//void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+//{
+//	glViewport(0, 0, width, height);
+//}
 
 void processInput(GLFWwindow* window)
 {
