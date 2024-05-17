@@ -13,8 +13,8 @@ layout (binding = 4, rgba32f) uniform image2D agentTexture;
 uniform int windowWidth;
 uniform int windowHeight;
 uniform float time;
-float diffuseRate = 0.2;
-float decayRate = 0.001;
+float diffuseRate = 0.15;
+float decayRate = 0.0045;
 
 void main()
 {
@@ -22,17 +22,11 @@ void main()
 
 	vec4 agentTex = imageLoad(agentTexture, ivec2(gl_FragCoord.xy)).rgba;
 	vec4 trailTex = imageLoad(trailTexture, ivec2(gl_FragCoord.xy)).rgba;
-	FragColor = trailTex + agentTex;
+	FragColor = trailTex;
 };
 
 void diffuseTrail()
 {
-	//check if outside of window bounds
-//	if (texelCoord.x < 0 || texelCoord.x > windowWidth || texelCoord.y < 0 || texelCoord.y > windowHeight)
-//	{
-//		return;
-//	}
-
 	vec4 blurredValue;
 	vec4 sum;
 	vec4 originalColor = imageLoad(trailTexture, ivec2(gl_FragCoord.xy)).rgba;
