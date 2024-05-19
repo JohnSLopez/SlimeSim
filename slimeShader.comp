@@ -30,7 +30,8 @@ float moveSpeed = 1;
 #define PI 3.1415926535897932384626433832795
 float sensorDistance = 10;
 float sensorAngle = PI / 4;
-float turnSpeed = 0.528;
+float turnSpeed = 0.628;
+vec4 agentColor = vec4(0.8117647058823529, 0.15294117647058825, 0.5490196078431373, 1);
 
 void main()
 {
@@ -85,11 +86,12 @@ void main()
 		currentAgent.y = min(windowHeight - 1, max(0, currentAgent.y));
 		currentAgent.direction = uintToRange01(hash(random)) * PI;
 	}
-	imageStore(trailTexture, ivec2(currentAgent.x, currentAgent.y), vec4(1, 1, 1, 1));
+	imageStore(trailTexture, ivec2(currentAgent.x, currentAgent.y), agentColor);
+	//imageStore(trailTexture, ivec2(currentAgent.x, currentAgent.y), vec4(0, 1, 1, 1));
 
 	agents[index] = currentAgent;
 
-	imageStore(agentTexture, texelCoord, vec4(0, 0, 0, 0));
+	imageStore(agentTexture, ivec2(currentAgent.x, currentAgent.y), vec4(.1176, .3176, .6627, 1));
 	imageStore(agentTexture, ivec2(currentAgent.x, currentAgent.y), vec4(1, 1, 1, 1));
 }
 

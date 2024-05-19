@@ -10,13 +10,17 @@ unsigned int windowWidth = 1920;
 unsigned int windowHeight = 1080;
 const unsigned int numAgents = 1000000;
 
+int radius = windowHeight / 3;
+
 float currentTime = 0;
 float prevTime = 0;
 float deltaTime= 0;
 # define PI 3.14159265358979323846  /* pi */
+bool paused = true;
 
 //void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 float mainTextureVertices[] =
 {
@@ -67,6 +71,8 @@ int main()
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
+	glfwSetKeyCallback(window, key_callback);
+
 	//Generate agents with random direction and spawn in center of screen
 	std::default_random_engine generator;
 	std::uniform_real_distribution<float> distribution(0, 2 * PI);
@@ -78,22 +84,20 @@ int main()
 	{
 		Agent temp;
 
-		temp.x = windowWidth / 2;
+		/*temp.x = windowWidth / 2;
 		temp.y = windowHeight / 2;
-		temp.direction = distribution(generator);
+		temp.direction = distribution(generator);*/
 
-		/*int radius = windowHeight / 3;
-		std::uniform_real_distribution<> randomAngle(0, 2 * PI);
-		std::uniform_int_distribution<> randomRadius(0, radius);
+		std::uniform_real_distribution<float> randomDistance(0, radius);
+		std::uniform_real_distribution<float> randomAngle(0, 2 * PI);
 
-		int distance = randomRadius(generator);
-		float genAngle = randomAngle(generator);
+		int distance = randomDistance(generator);
+		float angle = randomAngle(generator);
 
-		temp.x = (windowWidth / 2) + (cos(genAngle) * distance);
-		temp.y = (windowHeight / 2) + (sin(genAngle) * distance);*/
+		temp.x = (windowWidth / 2) + (cos(angle) * distance);
+		temp.y = (windowHeight / 2) + (sin(angle) * distance);
 
-		// get angle that is towards the circle centre
-		//temp.direction = genAngle + PI;
+		temp.direction = angle + PI;
 
 		agents[i] = temp;
 	}
@@ -177,41 +181,48 @@ int main()
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	glBindTextures(0, 2, textureArray);
 
+	glClearColor(0, .043137254901960784, .2549019607843137, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glfwSwapBuffers(window);
+
 	//main render loop
 	while (!glfwWindowShouldClose(window))
 	{
-		//get deltaTime
-		currentTime = glfwGetTime();
-		deltaTime = currentTime - prevTime;
-		prevTime = currentTime;
-
-		//input
+		//Handle pausing and closing input
 		processInput(window);
-		
-		//clear previous screen
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		//compute shader
-		cSlimeShader.use();
-		cSlimeShader.setFloat("time", currentTime);
-		glBindTextures(0, 2, textureArray);
-		glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glDispatchCompute(numAgents, 1, 1);
-		glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-		//vertex and frag shaders
-		vfSlimeShader.use();
-		vfSlimeShader.setFloat("time", currentTime);
-		vfSlimeShader.setInt("trailTexture", 3);
-		vfSlimeShader.setInt("agentTexture", 4);
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-		//call events and swap buffers
-		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		if (!paused)
+		{
+			//get deltaTime
+			currentTime = glfwGetTime();
+			deltaTime = currentTime - prevTime;
+			prevTime = currentTime;
+
+			//clear previous screen
+			glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			//compute shader
+			cSlimeShader.use();
+			cSlimeShader.setFloat("time", currentTime);
+			glBindTextures(0, 2, textureArray);
+			glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glDispatchCompute(numAgents, 1, 1);
+			glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			//vertex and frag shaders
+			vfSlimeShader.use();
+			vfSlimeShader.setFloat("time", currentTime);
+			vfSlimeShader.setInt("trailTexture", 3);
+			vfSlimeShader.setInt("agentTexture", 4);
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+			//call events and swap buffers
+			glfwSwapBuffers(window);
+		}
 	}
 
 	glfwTerminate();
@@ -223,5 +234,14 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true);
+	}
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (action == GLFW_RELEASE) return;
+	if (key == GLFW_KEY_SPACE)
+	{
+		paused = !paused;
 	}
 }
