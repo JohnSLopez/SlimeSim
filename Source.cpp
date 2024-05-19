@@ -37,15 +37,6 @@ struct Agent
 	float x = 0.0f;
 	float y = 0.0f;
 	float direction = 0.0f;
-
-	//Agent(float inputX, float inputY, float inputDirection) 
-	//{
-	//	x = inputX;
-	//	y = inputY;
-	//	direction = inputDirection;
-	//}
-
-	//Agent() = default;
 };
 
 int main()
@@ -86,11 +77,12 @@ int main()
 	for (int i = 0; i < numAgents; i++)
 	{
 		Agent temp;
-		/*temp.x = windowWidth / 2;
-		temp.y = windowHeight / 2;
-		temp.direction = distribution(generator);*/
 
-		int radius = windowHeight / 3;
+		temp.x = windowWidth / 2;
+		temp.y = windowHeight / 2;
+		temp.direction = distribution(generator);
+
+		/*int radius = windowHeight / 3;
 		std::uniform_real_distribution<> randomAngle(0, 2 * PI);
 		std::uniform_int_distribution<> randomRadius(0, radius);
 
@@ -98,10 +90,10 @@ int main()
 		float genAngle = randomAngle(generator);
 
 		temp.x = (windowWidth / 2) + (cos(genAngle) * distance);
-		temp.y = (windowHeight / 2) + (sin(genAngle) * distance);
+		temp.y = (windowHeight / 2) + (sin(genAngle) * distance);*/
 
 		// get angle that is towards the circle centre
-		temp.direction = genAngle + PI;
+		//temp.direction = genAngle + PI;
 
 		agents[i] = temp;
 	}
@@ -137,7 +129,6 @@ int main()
 	glBufferData(GL_SHADER_STORAGE_BUFFER, numAgents * sizeof(Agent), agents, GL_DYNAMIC_READ);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo);
 	free(agents);
-	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
 
 	//Create shaders
 	Shader vfSlimeShader("slimeShader.vert", "slimeShader.frag");
@@ -207,8 +198,7 @@ int main()
 		glBindTextures(0, 2, textureArray);
 		glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 		glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glDispatchCompute((unsigned int)TEXTURE_WIDTH * 1.5, (unsigned int)TEXTURE_HEIGHT * 1.5, 1);
-		//glDispatchCompute(16, 16, 1);
+		glDispatchCompute(numAgents, 1, 1);
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
 		//vertex and frag shaders
@@ -217,7 +207,6 @@ int main()
 		vfSlimeShader.setInt("trailTexture", 3);
 		vfSlimeShader.setInt("agentTexture", 4);
 		glBindVertexArray(VAO);
-		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		//call events and swap buffers

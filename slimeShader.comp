@@ -1,6 +1,7 @@
 #version 430 core
 
-layout (local_size_x = 30, local_size_y = 30, local_size_z = 1) in;
+//layout (local_size_x = 30, local_size_y = 30, local_size_z = 1) in;
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 struct Agent
 {
@@ -25,20 +26,15 @@ layout (std430, binding = 1) buffer agentBuffer
     Agent agents[];
 };
 
-float moveSpeed = 0.03;
+float moveSpeed = 1;
 #define PI 3.1415926535897932384626433832795
 float sensorDistance = 10;
 float sensorAngle = PI / 4;
-float turnSpeed = 0.0098;
+float turnSpeed = 0.528;
 
 void main()
 {
-    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy) / 2;
-
-	if (texelCoord.x < 0 || texelCoord.x > windowWidth || texelCoord.y < 0 || texelCoord.y > windowHeight)
-	{
-		return;
-	}
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
 
 	uint index = gl_GlobalInvocationID.x;
 	Agent currentAgent = agents[index];
@@ -53,12 +49,12 @@ void main()
 	//Sensed more left
 	if (senseLeft > senseRight && senseLeft > senseForward)
 	{
-		currentAgent.direction += randomSteer * turnSpeed;
+		currentAgent.direction += randomSteer * turnSpeed / 3;
 	}
 	//Sensed more right
 	else if (senseRight > senseLeft && senseRight > senseForward)
 	{
-		currentAgent.direction -= randomSteer * turnSpeed;
+		currentAgent.direction -= randomSteer * turnSpeed / 3;
 	}
 	//Sensed more forward
 	else if (senseForward > senseLeft && senseForward > senseRight)
@@ -67,11 +63,11 @@ void main()
 	}
 	else if (senseLeft == 0 && senseRight == 0 && senseForward == 0)
 	{
-		currentAgent.direction += (randomSteer - 0.5) * turnSpeed;
+		currentAgent.direction += (randomSteer - 0.5) * turnSpeed / 3;
 	}
 	else 
 	{
-		currentAgent.direction += (randomSteer - 0.5) * turnSpeed;
+		currentAgent.direction += (randomSteer - 0.5) * turnSpeed / 3;
 	}
 
 	//calculate agent movement
@@ -102,7 +98,6 @@ float sense(Agent currentAgent, float sensorAngle)
 	float sensorDirection = sensorAngle + currentAgent.direction;
 	ivec2 sensorPosition = ivec2(currentAgent.x + cos(sensorDirection) * sensorDistance, currentAgent.y + sin(sensorDirection) * sensorDistance);
 	vec4 values = imageLoad(trailTexture, sensorPosition);
-	//imageStore(agentTexture, sensorPosition, vec4(0.0, 1.0, 0.0, 1.0));
 	return values.x + values.y + values.z;
 }
 

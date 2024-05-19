@@ -8,13 +8,11 @@ in vec2 TexCoords;
 layout (binding = 3, rgba32f) uniform image2D trailTexture;
 layout (binding = 4, rgba32f) uniform image2D agentTexture;
 
-//uniform sampler2D trailTexture;
-//uniform sampler2D agentTexture;
 uniform int windowWidth;
 uniform int windowHeight;
 uniform float time;
-float diffuseRate = 0.15;
-float decayRate = 0.0045;
+float diffuseRate = 0.3;
+float decayRate = 0.0125;
 
 void main()
 {
