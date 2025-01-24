@@ -31,7 +31,7 @@ float moveSpeed = 1;
 float sensorDistance = 10;
 float sensorAngle = PI / 4;
 float turnSpeed = 0.628;
-vec4 agentColor = vec4(0.8117647058823529, 0.15294117647058825, 0.5490196078431373, 1);
+vec4 agentColor = vec4(1, 1, 1, 1);
 
 void main()
 {

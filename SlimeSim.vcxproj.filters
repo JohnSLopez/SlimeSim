@@ -38,6 +38,15 @@
     <ClInclude Include="ComputeShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="libraries\Include\glad\glad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libraries\Include\GLFW\glfw3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libraries\Include\GLFW\glfw3native.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\slimeShader.fs" />

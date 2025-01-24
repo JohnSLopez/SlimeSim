@@ -181,7 +181,7 @@ int main()
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	glBindTextures(0, 2, textureArray);
 
-	glClearColor(0, .043137254901960784, .2549019607843137, 1);
+	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glfwSwapBuffers(window);
 

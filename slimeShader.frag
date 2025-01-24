@@ -13,7 +13,7 @@ uniform int windowHeight;
 uniform float time;
 float diffuseRate = 0.5;
 float decayRate = 0.055;
-vec4 backgroundColor = vec4(0, .043137254901960784, .2549019607843137, 1);
+vec4 backgroundColor = vec4(0, 0, 0, 1);
 
 void main()
 {
@@ -47,9 +47,9 @@ void diffuseTrail()
 
 	float diffuseWeight = clamp(diffuseRate, 0, 1);
 	vec4 calculatedColor = originalColor * (1 - diffuseWeight) + blurredValue * diffuseWeight;
-	calculatedColor.x -= decayRate * .1;
-	calculatedColor.y -= decayRate;
-	calculatedColor.z -= decayRate * .5;
+	calculatedColor.x -= decayRate * .2;
+	calculatedColor.y -= decayRate * .2;
+	calculatedColor.z -= decayRate * .2;
 	
 	if (calculatedColor.x > 0 || calculatedColor.y > 0 || calculatedColor.z > 0)
 	{
