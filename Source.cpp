@@ -1,5 +1,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <random>
 #include "VertexBuffer.h"
 #include <iostream>
 #include "Shader.h"
@@ -7,13 +8,19 @@
 
 unsigned int windowWidth = 1920;
 unsigned int windowHeight = 1080;
+const unsigned int numAgents = 1000000;
+
+int radius = windowHeight / 3;
+
 float currentTime = 0;
 float prevTime = 0;
 float deltaTime= 0;
 # define PI 3.14159265358979323846  /* pi */
+bool paused = true;
 
 //void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 float mainTextureVertices[] =
 {
@@ -34,20 +41,6 @@ struct Agent
 	float x = 0.0f;
 	float y = 0.0f;
 	float direction = 0.0f;
-
-	Agent(float inputX, float inputY, float inputDirection) 
-	{
-		x = inputX;
-		y = inputY;
-		direction = inputDirection;
-	}
-};
-
-Agent agents[] =
-{
-	Agent(windowWidth / 2 + 20, windowHeight / 2, 0),
-	Agent(windowWidth / 2, windowHeight / 2, PI / 2),
-	Agent(windowWidth / 2 - 20, windowHeight / 2, (3 *PI) / 4)
 };
 
 int main()
@@ -78,6 +71,36 @@ int main()
 
 	glViewport(0, 0, windowWidth, windowHeight);
 
+	glfwSetKeyCallback(window, key_callback);
+
+	//Generate agents with random direction and spawn in center of screen
+	std::default_random_engine generator;
+	std::uniform_real_distribution<float> distribution(0, 2 * PI);
+
+	Agent *agents;
+	agents = (Agent*)malloc(numAgents * sizeof(Agent));
+
+	for (int i = 0; i < numAgents; i++)
+	{
+		Agent temp;
+
+		/*temp.x = windowWidth / 2;
+		temp.y = windowHeight / 2;
+		temp.direction = distribution(generator);*/
+
+		std::uniform_real_distribution<float> randomDistance(0, radius);
+		std::uniform_real_distribution<float> randomAngle(0, 2 * PI);
+
+		int distance = randomDistance(generator);
+		float angle = randomAngle(generator);
+
+		temp.x = (windowWidth / 2) + (cos(angle) * distance);
+		temp.y = (windowHeight / 2) + (sin(angle) * distance);
+
+		temp.direction = angle + PI;
+
+		agents[i] = temp;
+	}
 
 	//Initialize Vertex Array Object
 	unsigned int VAO, EBO;
@@ -107,9 +130,9 @@ int main()
 	unsigned int ssbo;
 	glGenBuffers(1, &ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(agents), agents, GL_DYNAMIC_DRAW); //sizeof(data) only works for statically sized C/C++ arrays.
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numAgents * sizeof(Agent), agents, GL_DYNAMIC_READ);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbo);
-	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // unbind
+	free(agents);
 
 	//Create shaders
 	Shader vfSlimeShader("slimeShader.vert", "slimeShader.frag");
@@ -158,57 +181,67 @@ int main()
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	glBindTextures(0, 2, textureArray);
 
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glfwSwapBuffers(window);
+
 	//main render loop
 	while (!glfwWindowShouldClose(window))
 	{
-		//get deltaTime
-		currentTime = glfwGetTime();
-		deltaTime = currentTime - prevTime;
-		prevTime = currentTime;
-
-		//input
+		//Handle pausing and closing input
 		processInput(window);
-		
-		//clear previous screen
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		//compute shader
-		cSlimeShader.use();
-		cSlimeShader.setFloat("time", currentTime);
-		glBindTextures(0, 2, textureArray);
-		glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-		glDispatchCompute((unsigned int)TEXTURE_WIDTH, (unsigned int)TEXTURE_HEIGHT, 1);
-		glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-		//vertex and frag shaders
-		vfSlimeShader.use();
-		vfSlimeShader.setFloat("time", currentTime);
-		vfSlimeShader.setInt("trailTexture", 3);
-		vfSlimeShader.setInt("agentTexture", 4);
-		glBindVertexArray(VAO);
-		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-		//call events and swap buffers
-		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		if (!paused)
+		{
+			//get deltaTime
+			currentTime = glfwGetTime();
+			deltaTime = currentTime - prevTime;
+			prevTime = currentTime;
+
+			//clear previous screen
+			glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			//compute shader
+			cSlimeShader.use();
+			cSlimeShader.setFloat("time", currentTime);
+			glBindTextures(0, 2, textureArray);
+			glBindImageTexture(3, trailTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glBindImageTexture(4, agentTexture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+			glDispatchCompute(numAgents, 1, 1);
+			glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+			//vertex and frag shaders
+			vfSlimeShader.use();
+			vfSlimeShader.setFloat("time", currentTime);
+			vfSlimeShader.setInt("trailTexture", 3);
+			vfSlimeShader.setInt("agentTexture", 4);
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+			//call events and swap buffers
+			glfwSwapBuffers(window);
+		}
 	}
 
 	glfwTerminate();
 	return 0;
 }
 
-//void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-//{
-//	glViewport(0, 0, width, height);
-//}
-
 void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true);
+	}
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (action == GLFW_RELEASE) return;
+	if (key == GLFW_KEY_SPACE)
+	{
+		paused = !paused;
 	}
 }

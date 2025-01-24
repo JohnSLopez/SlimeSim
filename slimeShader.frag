@@ -8,32 +8,25 @@ in vec2 TexCoords;
 layout (binding = 3, rgba32f) uniform image2D trailTexture;
 layout (binding = 4, rgba32f) uniform image2D agentTexture;
 
-//uniform sampler2D trailTexture;
-//uniform sampler2D agentTexture;
 uniform int windowWidth;
 uniform int windowHeight;
 uniform float time;
-float diffuseRate = 0.005;
-float decayRate = 0.0003;
+float diffuseRate = 0.5;
+float decayRate = 0.055;
+vec4 backgroundColor = vec4(0, 0, 0, 1);
 
 void main()
 {
-	diffuseTrail();
+	FragColor = backgroundColor;
 
+	diffuseTrail();
 	vec4 agentTex = imageLoad(agentTexture, ivec2(gl_FragCoord.xy)).rgba;
 	vec4 trailTex = imageLoad(trailTexture, ivec2(gl_FragCoord.xy)).rgba;
-	trailTex.a = 1.0f;
-	FragColor = trailTex;
+	FragColor += trailTex;
 };
 
 void diffuseTrail()
 {
-	//check if outside of window bounds
-//	if (texelCoord.x < 0 || texelCoord.x > windowWidth || texelCoord.y < 0 || texelCoord.y > windowHeight)
-//	{
-//		return;
-//	}
-
 	vec4 blurredValue;
 	vec4 sum;
 	vec4 originalColor = imageLoad(trailTexture, ivec2(gl_FragCoord.xy)).rgba;
@@ -54,7 +47,18 @@ void diffuseTrail()
 
 	float diffuseWeight = clamp(diffuseRate, 0, 1);
 	vec4 calculatedColor = originalColor * (1 - diffuseWeight) + blurredValue * diffuseWeight;
-	calculatedColor -= decayRate;
-	calculatedColor.a = 1.0;
+	calculatedColor.x -= decayRate * .2;
+	calculatedColor.y -= decayRate * .2;
+	calculatedColor.z -= decayRate * .2;
+	
+	if (calculatedColor.x > 0 || calculatedColor.y > 0 || calculatedColor.z > 0)
+	{
+		calculatedColor.a = 1.0;
+	}
+	else
+	{
+		calculatedColor.a = 0;
+	}
+
 	imageStore(trailTexture, ivec2(gl_FragCoord.xy), max(calculatedColor, 0.0f));
 };
